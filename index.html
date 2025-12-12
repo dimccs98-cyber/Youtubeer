@@ -1,86 +1,42 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Video Player</title>
+    <title>Player</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f1f1f1;
-            display: flex;
-            flex-direction: column;
-        }
-        #player-container {
-            width: 100%;
-            padding-top: 56.25%; /* 16:9 Aspect Ratio */
-            position: relative;
-            background-color: #000;
-        }
-        #player {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-        #transcript-container {
-            flex-grow: 1;
-            overflow-y: auto;
-            padding: 16px;
-            line-height: 1.5;
-            color: #333;
-        }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background-color: #000; overflow: hidden; }
+        #player { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
     </style>
 </head>
 <body>
-
-    <div id="player-container">
-        <div id="player"></div>
-    </div>
-
-    <div id="transcript-container">
-        <p id="transcript-text"></p>
-    </div>
+    <!-- 1. The <div> that will be replaced with the YouTube player -->
+    <div id="player"></div>
 
     <script>
-        // 1. Get parameters from URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const videoId = urlParams.get('videoId');
-        const transcript = urlParams.get('text');
-
-        // 2. Set transcript text
-        if (transcript) {
-            document.getElementById('transcript-text').innerText = decodeURIComponent(transcript);
-        }
-
-        // 3. Load the IFrame Player API code asynchronously.
+        // 2. Load the IFrame Player API code asynchronously.
         var tag = document.createElement('script');
         tag.src = "https://www.youtube.com/iframe_api";
         var firstScriptTag = document.getElementsByTagName('script')[0];
         firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
-        // 4. This function creates an <iframe> (and YouTube player)
+        // 3. This function creates an <iframe> (and YouTube player)
         //    after the API code downloads.
         var player;
         function onYouTubeIframeAPIReady() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const videoId = urlParams.get('videoId');
             if (videoId) {
                 player = new YT.Player('player', {
                     height: '100%',
                     width: '100%',
                     videoId: videoId,
-                    // --- KEY CHANGE 1: Use the privacy-enhanced mode ---
-                    host: 'https://www.youtube-nocookie.com',
                     playerVars: {
-                        'playsinline': 1,
                         'autoplay': 1,
-                        'controls': 1,
-                        'modestbranding': 1,
-                        'rel': 0,
-                        // --- KEY CHANGE 2: Explicitly declare the origin ---
-                        'origin': window.location.origin
+                        'controls': 1,        // <-- Explicitly show controls
+                        'fs': 1,              // <-- Explicitly show fullscreen button
+                        'rel': 0,             // Hide related videos
+                        'modestbranding': 1,  // Use minimal branding
+                        'playsinline': 0      // Allow player to go fullscreen
                     }
                 });
             }
