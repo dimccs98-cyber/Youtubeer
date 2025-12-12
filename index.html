@@ -7,17 +7,12 @@
     <style>
         body { margin: 0; padding: 0; background-color: #121212; color: #e0e0e0; font-family: sans-serif; }
         
-        /* 视频容器
-           这里我们设置 height: 100vh 会导致页面底部内容被挤下去，
-           为了兼容底部的文字摘要，我们保持 16:9 的比例。
-           但是为了让控制条显示，高度必须足够。
-        */
+        /* 视频容器：吸顶，保持 16:9 */
         .video-container { 
             position: sticky; 
             top: 0; 
             width: 100%; 
-            /* 16:9 比例 (9 / 16 = 0.5625) */
-            padding-bottom: 56.25%; 
+            padding-bottom: 56.25%; /* 16:9 */
             background: #000; 
             z-index: 999; 
             height: 0;
@@ -47,9 +42,10 @@
             line-height: 1.6; 
             color: #cccccc; 
             word-wrap: break-word; 
-            white-space: pre-wrap;
+            white-space: pre-wrap; /* 保留换行符 */
         }
         
+        /* 加载动画 */
         .loader {
             display: flex;
             justify-content: center;
@@ -58,6 +54,7 @@
             width: 100%;
             position: absolute;
             color: #666;
+            font-size: 14px;
         }
     </style>
 </head>
@@ -74,27 +71,23 @@
     </div>
 
     <script>
-        // 获取参数
+        // 1. 从 URL 获取参数
         const urlParams = new URLSearchParams(window.location.search);
-        // 兼容 ?v=ID 和 ?videoId=ID
-        const videoId = urlParams.get('v') || urlParams.get('videoId'); 
+        const videoId = urlParams.get('v') || urlParams.get('videoId');
         const quoteTextRaw = urlParams.get('text');
 
-        // 填充文字
+        // 2. 填充文字 (修复：移除多余的 decodeURIComponent，防止报错)
         const quoteDiv = document.getElementById('quote-text');
         if (quoteTextRaw) {
-            try {
-                quoteDiv.innerText = decodeURIComponent(quoteTextRaw);
-            } catch(e) {
-                quoteDiv.innerText = quoteTextRaw;
-            }
+            quoteDiv.innerText = quoteTextRaw;
         } else {
             quoteDiv.innerText = "暂无摘要内容";
         }
 
-        // 加载 YouTube API
+        // 3. 动态加载 YouTube IFrame API
         if (videoId) {
             var tag = document.createElement('script');
+            // 【重要修复】这里必须是纯 URL 字符串，不能有 []() 符号
             tag.src = "https://www.youtube.com/iframe_api";
             var firstScriptTag = document.getElementsByTagName('script')[0];
             firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
@@ -105,29 +98,36 @@
                     height: '100%',
                     width: '100%',
                     videoId: videoId,
-                    // 强制 No-Cookie 域名
+                    // 【重要修复】这里也必须是纯 URL 字符串
                     host: 'https://www.youtube-nocookie.com',
                     playerVars: {
-                        'autoplay': 1,
-                        'controls': 1,       // 【关键】显式开启控制条
-                        'playsinline': 1,    // 【关键】允许内嵌播放，配合Java代码的全屏回调
-                        'fs': 1,             // 【关键】显示全屏按钮
-                        'rel': 0,            // 不显示相关视频
-                        'modestbranding': 1, // 极简 Logo
-                        'origin': window.location.origin
+                        'autoplay': 1,        // 尝试自动播放
+                        'controls': 1,        // 强制显示控制条
+                        'playsinline': 1,     // 内嵌播放
+                        'fs': 1,              // 显示全屏按钮
+                        'rel': 0,             // 不显示推荐
+                        'modestbranding': 1,  // 简化 Logo
+                        'iv_load_policy': 3,  // 隐藏注释
+                        'origin': window.location.origin // 解决跨域
                     },
                     events: {
-                        'onReady': onPlayerReady
+                        'onReady': onPlayerReady,
+                        'onError': onPlayerError
                     }
                 });
             }
 
             function onPlayerReady(event) {
-                // 部分环境需要静音才能自动播放
-                // event.target.playVideo();
+                // 如果需要，可以在这里处理自动播放逻辑
+            }
+
+            function onPlayerError(event) {
+                console.error("YouTube Player Error:", event.data);
             }
         } else {
             document.querySelector('.video-container').innerHTML = '<div style="padding:20px;text-align:center;color:white;">无效的视频 ID</div>';
+            // 如果没有 ID，顺便把加载文字也清掉
+            if(quoteDiv.innerText === "正在获取摘要...") quoteDiv.innerText = "";
         }
     </script>
 </body>
