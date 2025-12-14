@@ -13,10 +13,10 @@
             color: #e0e0e0; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             width: 100%;
-            overflow-x: hidden; /* 防止横向滚动 */
+            overflow-x: hidden;
         }
 
-        /* 视频容器：强制固定在顶部，使用 vw 单位确保比例 */
+        /* 视频容器：强制固定在顶部 */
         .video-container { 
             position: fixed; 
             top: 0; 
@@ -33,7 +33,7 @@
             width: 100%; 
             height: 100%; 
             border: none; 
-            display: block; /* 消除底部微小间隙 */
+            display: block;
         }
 
         /* 文本内容区：顶部留出视频的高度 */
@@ -63,29 +63,14 @@
             word-wrap: break-word;
         }
         
-        #fallback-layer {
-            display: none;
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: #111;
-            z-index: 1001;
-            flex-direction: column; justify-content: center; align-items: center;
-        }
-        
-        #fallback-btn {
-            background-color: #c00; color: #fff; padding: 8px 16px; 
-            text-decoration: none; border-radius: 4px; margin-top: 10px; font-size: 14px;
-        }
+        /* 已删除 #fallback-layer 相关样式 */
     </style>
 </head>
 <body>
 
     <div class="video-container">
         <div id="player"></div>
-        <!-- 救场层 -->
-        <div id="fallback-layer">
-            <div style="color: #eee; font-size: 14px;">无法直接播放</div>
-            <a id="fallback-btn" href="#" target="_blank">跳转观看</a>
-        </div>
+        <!-- 已删除 救场层 -->
     </div>
 
     <div class="content">
@@ -94,7 +79,6 @@
     </div>
 
     <script>
-        // --- 简单的参数获取与显示逻辑 ---
         try {
             const urlParams = new URLSearchParams(window.location.search);
             const videoId = urlParams.get('v');
@@ -107,10 +91,6 @@
             }
 
             if (videoId) {
-                // 更新跳转链接
-                document.getElementById('fallback-btn').href = "https://m.youtube.com/watch?v=" + videoId;
-                
-                // 加载 YouTube API
                 var tag = document.createElement('script');
                 tag.src = "https://www.youtube.com/iframe_api";
                 var firstScriptTag = document.getElementsByTagName('script')[0];
@@ -125,7 +105,7 @@
                         host: 'https://www.youtube-nocookie.com',
                         playerVars: {
                             'autoplay': 1,
-                            'playsinline': 1, // 关键：允许在 iOS/iPad 环境下内嵌播放
+                            'playsinline': 1,
                             'controls': 1,
                             'rel': 0,
                             'modestbranding': 1,
@@ -133,15 +113,12 @@
                         },
                         events: {
                             'onReady': function(event) {
-                                event.target.mute(); // 必须静音才能自动播放
+                                event.target.mute();
                                 event.target.playVideo();
                             },
                             'onError': function(event) {
                                 console.error("YT Error:", event.data);
-                                // 错误码 150/101/152 表示被拦截
-                                if([150, 101, 152, 5].includes(event.data)){
-                                    document.getElementById('fallback-layer').style.display = 'flex';
-                                }
+                                // 已删除错误处理中的遮罩显示逻辑
                             }
                         }
                     });
