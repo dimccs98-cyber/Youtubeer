@@ -7,7 +7,6 @@
     <style>
         body { margin: 0; padding: 0; background-color: #121212; color: #e0e0e0; font-family: sans-serif; }
         
-        /* 视频容器：吸顶，保持 16:9 */
         .video-container { 
             position: sticky; 
             top: 0; 
@@ -27,7 +26,34 @@
             border: none; 
         }
 
-        /* 文字内容区域 */
+        /* 错误/禁止嵌入时的遮罩层 */
+        #fallback-layer {
+            display: none; /* 默认隐藏 */
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            z-index: 1000;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        #fallback-btn {
+            background-color: #cc0000;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            margin-top: 10px;
+        }
+
         .content { padding: 20px 16px; }
         .title { 
             font-size: 18px; 
@@ -45,14 +71,15 @@
             white-space: pre-wrap;
         }
         
-        /* 错误提示条 (调试用) */
         #error-bar {
             display: none;
             background-color: #ff4444;
             color: white;
-            padding: 10px;
-            font-size: 12px;
-            word-break: break-all;
+            padding: 5px;
+            font-size: 10px;
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 2000;
         }
 
         .loader {
@@ -65,103 +92,112 @@
             color: #666;
             font-size: 14px;
         }
+        
+        .version-tag {
+            position: fixed;
+            bottom: 5px; right: 5px;
+            color: #333; font-size: 10px;
+        }
     </style>
 </head>
 <body>
 
-    <!-- 调试错误显示区 -->
     <div id="error-bar"></div>
 
     <div class="video-container">
         <div class="loader">加载中...</div>
         <div id="player"></div>
+        
+        <!-- 救场遮罩层 -->
+        <div id="fallback-layer">
+            <div style="color: #fff; margin-bottom: 8px;">此视频限制了嵌入播放</div>
+            <a id="fallback-btn" href="#" target="_blank">前往 YouTube 观看</a>
+        </div>
     </div>
 
     <div class="content">
         <div class="title">视频摘要</div>
         <div class="text" id="quote-text">正在获取摘要...</div>
     </div>
+    
+    <div class="version-tag">v4.0 (Fix 150)</div>
 
     <script>
-        // --- 全局错误捕获 (帮我们在手机上看到报错) ---
-        window.onerror = function(message, source, lineno, colno, error) {
-            var errorDiv = document.getElementById('error-bar');
-            errorDiv.style.display = 'block';
-            errorDiv.innerHTML += "JS Error: " + message + " (Line " + lineno + ")<br>";
-        };
+        // 全局参数
+        const urlParams = new URLSearchParams(window.location.search);
+        const videoId = urlParams.get('v') || urlParams.get('videoId');
+        const quoteTextRaw = urlParams.get('text');
 
-        try {
-            // 1. 获取参数
-            const urlParams = new URLSearchParams(window.location.search);
-            const videoId = urlParams.get('v') || urlParams.get('videoId');
-            const quoteTextRaw = urlParams.get('text');
-
-            // 2. 填充文字 (带防崩溃保护)
-            const quoteDiv = document.getElementById('quote-text');
-            if (quoteTextRaw) {
-                // 有些时候 URL 已经被解码过一次，再次解码会报错，所以加个 try
-                try {
-                    quoteDiv.innerText = decodeURIComponent(quoteTextRaw);
-                } catch (e) {
-                    quoteDiv.innerText = quoteTextRaw; // 如果解码失败，直接显示原文
-                }
-            } else {
-                quoteDiv.innerText = "暂无摘要内容";
+        // --- 1. 优先处理文字显示 (不管视频是否报错，先把字显示出来) ---
+        const quoteDiv = document.getElementById('quote-text');
+        if (quoteTextRaw) {
+            try {
+                // 尝试解码，如果失败就显示原文
+                quoteDiv.innerText = decodeURIComponent(quoteTextRaw);
+            } catch (e) {
+                quoteDiv.innerText = quoteTextRaw;
             }
+        } else {
+            quoteDiv.innerText = "暂无摘要内容";
+        }
 
-            // 3. 加载 YouTube API
-            if (videoId) {
-                var tag = document.createElement('script');
-                // 纯净的 URL，绝对不要加 Markdown 符号
-                tag.src = "https://www.youtube.com/iframe_api";
-                var firstScriptTag = document.getElementsByTagName('script')[0];
-                firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        // --- 2. 视频处理逻辑 ---
+        if (videoId) {
+            // 配置救场按钮的链接
+            document.getElementById('fallback-btn').href = "https://m.youtube.com/watch?v=" + videoId;
 
-                var player;
-                // 必须声明为全局变量，API 才能回调
-                window.onYouTubeIframeAPIReady = function() {
-                    player = new YT.Player('player', {
-                        height: '100%',
-                        width: '100%',
-                        videoId: videoId,
-                        host: 'https://www.youtube-nocookie.com',
-                        playerVars: {
-                            'autoplay': 1,
-                            'controls': 1,
-                            'playsinline': 1,
-                            'fs': 1,
-                            'rel': 0,
-                            'modestbranding': 1,
-                            'origin': window.location.origin
-                        },
-                        events: {
-                            'onReady': onPlayerReady,
-                            'onError': onPlayerError
-                        }
-                    });
-                };
-            } else {
-                document.querySelector('.video-container').innerHTML = '<div style="padding:20px;text-align:center;color:white;">无效的视频 ID</div>';
-            }
-        } catch (e) {
-            console.error(e);
-            document.getElementById('error-bar').style.display = 'block';
-            document.getElementById('error-bar').innerHTML += "Script Init Error: " + e.message;
+            var tag = document.createElement('script');
+            tag.src = "https://www.youtube.com/iframe_api";
+            var firstScriptTag = document.getElementsByTagName('script')[0];
+            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+            var player;
+            window.onYouTubeIframeAPIReady = function() {
+                player = new YT.Player('player', {
+                    height: '100%',
+                    width: '100%',
+                    videoId: videoId,
+                    // 尝试切回标准域名，兼容性更好
+                    host: 'https://www.youtube.com',
+                    playerVars: {
+                        'autoplay': 1,
+                        'controls': 1,
+                        'playsinline': 1,
+                        'fs': 1,
+                        'rel': 0,
+                        'modestbranding': 1,
+                        'origin': window.location.origin
+                    },
+                    events: {
+                        'onReady': onPlayerReady,
+                        'onError': onPlayerError
+                    }
+                });
+            };
+        } else {
+            document.querySelector('.video-container').innerHTML = '<div style="padding:20px;text-align:center;color:white;">无效的视频 ID</div>';
         }
 
         function onPlayerReady(event) {
-            // 【关键修复】移动端必须先静音才能自动播放
             event.target.mute();
             event.target.playVideo();
         }
 
         function onPlayerError(event) {
-            var errorMsg = "YouTube Error Code: " + event.data;
-            console.error(errorMsg);
-            // 如果是 150/101 错误，说明禁止嵌入，尝试提示用户
+            console.error("YouTube Error:", event.data);
+            // 错误代码 150 或 101：禁止嵌入
             if (event.data === 150 || event.data === 101) {
-                document.getElementById('error-bar').style.display = 'block';
-                document.getElementById('error-bar').innerHTML = "此视频禁止嵌入播放，请检查 YouTube 设置。";
+                // 显示救场遮罩层
+                document.getElementById('fallback-layer').style.display = 'flex';
+                // 隐藏背后的报错 iframe
+                if(document.getElementById('player')) {
+                     document.getElementById('player').style.display = 'none';
+                }
+            } else {
+                // 其他错误显示在顶部红条
+                var errorDiv = document.getElementById('error-bar');
+                errorDiv.style.display = 'block';
+                errorDiv.innerText = "播放错误: " + event.data;
             }
         }
     </script>
