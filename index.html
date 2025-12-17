@@ -5,62 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Video Player</title>
     <style>
-        /* 全局重置 */
-        * { box-sizing: border-box; }
         body { margin: 0; padding: 0; background-color: #121212; color: #e0e0e0; font-family: sans-serif; }
         
-        /* --- 1. 视频区域 (固定头部) --- */
         .video-container { 
-            position: fixed; /* 钉死在顶部 */
-            top: 0; 
-            left: 0;
-            width: 100%; 
-            /* 强制 16:9 高度 (100vw * 9 / 16 = 56.25%) */
-            height: 0;
-            padding-bottom: 56.25%; 
-            background: #000; 
-            z-index: 9999; /* 【关键】层级最高，防止被文字遮挡 */
-            box-shadow: 0 4px 12px rgba(0,0,0,0.8); /* 底部阴影，区分视频和文字 */
+            position: sticky; top: 0; width: 100%; 
+            padding-bottom: 56.25%; /* 16:9 */
+            background: #000; z-index: 999; 
         }
         
         .video-container iframe { 
-            position: absolute;
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%; 
-            border: none; 
-            display: block;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; 
         }
 
-        /* --- 2. 救场按钮 --- */
-        /* 放在内容区顶部，而不是视频区里，防止遮挡视频 */
-        .fallback-area {
-            text-align: center;
-            padding: 10px;
-            background: #1e1e1e;
-            border-bottom: 1px solid #333;
-        }
+        /* 救场按钮：一直显示在下方，以防万一 */
         #fallback-link {
-            color: #888; font-size: 12px; text-decoration: none;
-        }
-
-        /* --- 3. 内容区域 (防遮挡核心) --- */
-        .content-wrapper { 
-            /* 【关键】给顶部留出正好等于视频高度的空间 */
-            /* 56.25vw 是视频高度 */
-            margin-top: 56.25vw; 
-            position: relative; 
-            z-index: 1; /* 层级低于视频 */
-            overflow-y: auto;
+            display: block; text-align: center; padding: 12px;
+            color: #666; font-size: 12px; text-decoration: none;
+            border-bottom: 1px solid #333;
         }
 
         .content { padding: 20px 16px; min-height: 50vh; }
-
         .title { 
             font-size: 18px; font-weight: bold; margin-bottom: 12px; 
             color: #ffffff; border-left: 4px solid #FFD700; padding-left: 10px; 
-            line-height: 1.4;
         }
         .text { 
             font-size: 16px; line-height: 1.6; color: #cccccc; 
@@ -70,38 +37,32 @@
         .loader {
             display: flex; justify-content: center; align-items: center;
             height: 100%; width: 100%; position: absolute; color: #666; font-size: 14px;
-            z-index: -1;
+            z-index: -1; /* 放在 iframe 后面 */
         }
     </style>
 </head>
 <body>
 
-    <!-- 1. 固定顶部的视频容器 -->
     <div class="video-container" id="video-wrapper">
         <div class="loader">加载中...</div>
-        <!-- iframe 将被脚本插入这里 -->
+        <!-- iframe 将被直接插入这里 -->
     </div>
 
-    <!-- 2. 下方滚动内容区域 -->
-    <div class="content-wrapper">
-        <!-- 救场链接 -->
-        <div class="fallback-area">
-            <a id="fallback-link" href="#" target="_blank">播放遇到问题？点击跳转 YouTube App</a>
-        </div>
+    <!-- 备用跳转链接 -->
+    <a id="fallback-link" href="#" target="_blank">无法播放？点击跳转 YouTube App</a>
 
-        <div class="content">
-            <div class="title">视频摘要</div>
-            <div class="text" id="quote-text">正在获取数据...</div>
-        </div>
+    <div class="content">
+        <div class="title">视频摘要</div>
+        <div class="text" id="quote-text">正在获取数据...</div>
     </div>
 
     <script>
         try {
+            // 1. 显示摘要文字
             const urlParams = new URLSearchParams(window.location.search);
             const videoId = urlParams.get('v') || urlParams.get('videoId');
             const quoteTextRaw = urlParams.get('text');
 
-            // 1. 填充文字
             const quoteDiv = document.getElementById('quote-text');
             if (quoteTextRaw && quoteTextRaw !== "null") {
                 try {
@@ -113,15 +74,13 @@
                 quoteDiv.innerText = "暂无摘要内容";
             }
 
-            // 2. 插入视频
+            // 2. 暴力插入 IFrame (解决黑屏/API卡死问题的终极方案)
             if (videoId) {
                 // 更新跳转链接
                 document.getElementById('fallback-link').href = "https://m.youtube.com/watch?v=" + videoId;
 
-                // 构建 iframe
-                // controls=1: 强制显示进度条
-                // fs=1: 显示全屏按钮
-                // playsinline=1: 防止iOS强制全屏
+                // 构建纯净的 iframe HTML
+                // 使用 youtube-nocookie 域名
                 const iframeHtml = `
                     <iframe 
                         src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&controls=1&playsinline=1&fs=1&rel=0&modestbranding=1" 
@@ -133,15 +92,18 @@
                     </iframe>
                 `;
                 
+                // 获取容器
                 const wrapper = document.getElementById('video-wrapper');
+                
+                // 创建一个临时 div 来解析 HTML 字符串
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = iframeHtml.trim();
                 
-                // 插入 iframe (这会覆盖 loader)
+                // 将 iframe 插入到容器中 (覆盖在 loader 之上)
                 wrapper.appendChild(tempDiv.firstChild);
 
             } else {
-                document.getElementById('video-wrapper').innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100%;color:white;">无效的视频 ID</div>';
+                document.getElementById('video-wrapper').innerHTML = '<div style="padding:20px;text-align:center;color:white;">无效的视频 ID</div>';
             }
 
         } catch (e) {
