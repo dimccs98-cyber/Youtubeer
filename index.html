@@ -1,30 +1,54 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-    <meta charset="utf-8">
+<head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Video Player</title>
     <style>
-        body { margin: 0; padding: 0; background-color: #121212; color: #e0e0e0; font-family: sans-serif; }
-        
-        .video-container { 
-            position: sticky; top: 0; width: 100%; 
-            padding-bottom: 56.25%; /* 16:9 */
-            background: #000; z-index: 999; 
-        }
-        
-        .video-container iframe { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; 
+        /* --- 全局样式 --- */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: sans-serif;
         }
 
-        /* 救场按钮：一直显示在下方，以防万一 */
+        /* --- 核心修复：视频容器 --- */
+        .video-container {
+            position: relative; /* 关键：父容器相对定位 */
+            width: 100%;
+            height: 0; /* 关键：高度设置为0 */
+            padding-bottom: 56.25%; /* 关键：使用 padding-bottom 撑开容器，形成 16:9 (9 / 16 = 0.5625) */
+            background: #000;
+            z-index: 10; /* 确保在内容之上 */
+        }
+
+        .video-container iframe {
+            position: absolute; /* 关键：iframe 绝对定位，撑满父容器 */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        /* 加载动画样式 */
+        .loader {
+            display: flex; justify-content: center; align-items: center;
+            position: absolute; top:0; left: 0; right: 0; bottom: 0;
+            color: #666; font-size: 14px;
+        }
+
+        /* --- 其他内容样式 --- */
         #fallback-link {
             display: block; text-align: center; padding: 12px;
             color: #666; font-size: 12px; text-decoration: none;
             border-bottom: 1px solid #333;
         }
 
-        .content { padding: 20px 16px; min-height: 50vh; }
+        .content { 
+            padding: 20px 16px; 
+        }
         .title { 
             font-size: 18px; font-weight: bold; margin-bottom: 12px; 
             color: #ffffff; border-left: 4px solid #FFD700; padding-left: 10px; 
@@ -32,12 +56,6 @@
         .text { 
             font-size: 16px; line-height: 1.6; color: #cccccc; 
             word-wrap: break-word; white-space: pre-wrap; 
-        }
-        
-        .loader {
-            display: flex; justify-content: center; align-items: center;
-            height: 100%; width: 100%; position: absolute; color: #666; font-size: 14px;
-            z-index: -1; /* 放在 iframe 后面 */
         }
     </style>
 </head>
@@ -58,7 +76,6 @@
 
     <script>
         try {
-            // 1. 显示摘要文字
             const urlParams = new URLSearchParams(window.location.search);
             const videoId = urlParams.get('v') || urlParams.get('videoId');
             const quoteTextRaw = urlParams.get('text');
@@ -74,33 +91,28 @@
                 quoteDiv.innerText = "暂无摘要内容";
             }
 
-            // 2. 暴力插入 IFrame (解决黑屏/API卡死问题的终极方案)
             if (videoId) {
-                // 更新跳转链接
                 document.getElementById('fallback-link').href = "https://m.youtube.com/watch?v=" + videoId;
 
-                // 构建纯净的 iframe HTML
-                // 使用 youtube-nocookie 域名
-                const iframeHtml = `
-                    <iframe 
-                        src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&controls=1&playsinline=1&fs=1&rel=0&modestbranding=1" 
-                        title="YouTube video player" 
-                        frameborder="0" 
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                        referrerpolicy="strict-origin-when-cross-origin" 
-                        allowfullscreen>
-                    </iframe>
-                `;
+                const iframe = document.createElement('iframe');
+                iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=0&controls=1&playsinline=1&fs=1&rel=0&modestbranding=1`;
+                iframe.title = "YouTube video player";
+                iframe.frameborder = "0";
+                iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+                iframe.referrerpolicy = "strict-origin-when-cross-origin";
+                iframe.allowfullscreen = true;
                 
-                // 获取容器
                 const wrapper = document.getElementById('video-wrapper');
                 
-                // 创建一个临时 div 来解析 HTML 字符串
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = iframeHtml.trim();
-                
-                // 将 iframe 插入到容器中 (覆盖在 loader 之上)
-                wrapper.appendChild(tempDiv.firstChild);
+                // 加载成功后移除加载动画
+                iframe.onload = function() {
+                    const loader = wrapper.querySelector('.loader');
+                    if (loader) {
+                        loader.style.display = 'none';
+                    }
+                };
+
+                wrapper.appendChild(iframe);
 
             } else {
                 document.getElementById('video-wrapper').innerHTML = '<div style="padding:20px;text-align:center;color:white;">无效的视频 ID</div>';
