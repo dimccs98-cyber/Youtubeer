@@ -186,7 +186,7 @@
                         events: {
                             'onReady': function(event) {
                                 document.getElementById('loader').style.display = 'none';
-                                event.target.mute();
+                                // event.target.mute(); // 注释掉静音，实现默认有声播放
                                 event.target.playVideo();
                                 setTimeout(adjustLayout, 300);
                             },
