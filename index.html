@@ -5,63 +5,92 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Video Player</title>
     <style>
-        /* 全局重置 */
+        /* 全局设置 */
         * { box-sizing: border-box; }
         body { margin: 0; padding: 0; background-color: #121212; color: #e0e0e0; font-family: sans-serif; }
         
-        /* --- 1. 视频区域 (固定头部) --- */
-        /* 使用 fixed 定位，彻底解决被遮挡问题 */
-        .video-container { 
-            position: fixed; 
-            top: 0; 
-            left: 0;
-            width: 100%; 
-            /* 使用 vw 单位精确计算 16:9 高度 (100vw * 9 / 16 = 56.25vw) */
-            height: 56.25vw; 
-            background: #000; 
-            z-index: 1000; /* 层级极高，确保浮在文字之上 */
-            box-shadow: 0 4px 12px rgba(0,0,0,0.8); 
-        }
-        
-        .video-container iframe { 
-            width: 100%; height: 100%; border: none; display: block;
-        }
-
-        /* --- 2. 功能按钮区 (登录/救场) --- */
-        .action-bar {
-            /* 同样固定在视频下方 */
+        /* --- 1. 顶部固定区域 (包含视频 + 按钮) --- */
+        /* 我们把视频和按钮打包在一起固定，这样它们之间永远不会互相遮挡 */
+        #fixed-header {
             position: fixed;
-            top: 56.25vw;
+            top: 0;
             left: 0;
             width: 100%;
+            background: #000;
+            z-index: 9999;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+        }
+
+        /* 视频容器：保持 16:9 比例 */
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            height: 0;
+            padding-bottom: 56.25%; /* 16:9 黄金比例 */
+            background: #000;
+        }
+        
+        .video-wrapper iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* 操作栏：自然流在视频下方 */
+        .action-bar {
+            padding: 12px;
             background: #1e1e1e;
-            padding: 8px;
-            text-align: center;
             border-bottom: 1px solid #333;
-            z-index: 999;
             display: flex;
             justify-content: space-around;
             align-items: center;
         }
 
         .action-btn {
-            color: #3ea6ff; 
-            font-size: 13px; 
+            color: #3ea6ff;
+            font-size: 13px;
             text-decoration: none;
-            padding: 5px 10px;
+            padding: 6px 16px;
             border: 1px solid #333;
-            border-radius: 15px;
+            border-radius: 20px;
             background: #2a2a2a;
+            display: inline-block;
         }
 
-        /* --- 3. 内容区域 --- */
-        .content { 
-            /* 给顶部留出空间 = 视频高度 + 按钮栏高度 */
-            margin-top: calc(56.25vw + 45px); 
-            padding: 20px 16px; 
-            min-height: 100vh; 
+        /* --- 2. 登录遮罩层 --- */
+        #login-layer {
+            display: none;
+            position: absolute; /* 绝对定位覆盖在 video-wrapper 上 */
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            z-index: 10000; /* 最高层级 */
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center;
+            text-align: center;
+        }
+        
+        #login-msg { color: #fff; font-size: 14px; margin-bottom: 15px; line-height: 1.5; }
+
+        #login-btn {
+            background-color: #3ea6ff; color: #000; padding: 8px 24px; 
+            text-decoration: none; border-radius: 20px; font-size: 14px;
+            font-weight: 600; border: none; cursor: pointer;
+        }
+
+        /* --- 3. 下方文字内容区域 --- */
+        .content {
+            /* 这里的 padding-top 会由 JS 动态计算，防止被顶部遮挡 */
+            padding: 20px 16px;
+            min-height: 100vh;
             position: relative;
-            z-index: 1; 
+            z-index: 1;
         }
 
         .title { 
@@ -73,35 +102,62 @@
             font-size: 16px; line-height: 1.6; color: #cccccc; 
             word-wrap: break-word; white-space: pre-wrap; 
         }
-        
+
+        /* 加载动画 */
         .loader {
             display: flex; justify-content: center; align-items: center;
-            height: 100%; width: 100%; position: absolute; color: #666; font-size: 14px;
-            z-index: -1;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            color: #666; font-size: 14px; z-index: 1;
         }
     </style>
 </head>
 <body>
 
-    <!-- 1. 视频容器 -->
-    <div class="video-container" id="video-wrapper">
-        <div class="loader" id="loader">加载中...</div>
-        <!-- iframe 将被直接插入这里 -->
+    <!-- 顶部固定区域：包含视频和按钮 -->
+    <div id="fixed-header">
+        <div class="video-wrapper">
+            <div class="loader" id="loader">加载中...</div>
+            <div id="player"></div>
+            
+            <!-- 登录遮罩 -->
+            <div id="login-layer">
+                <div id="login-msg">播放受限<br>请登录 YouTube</div>
+                <a id="login-btn" href="#">点击登录</a>
+            </div>
+        </div>
+
+        <!-- 操作按钮栏 -->
+        <div class="action-bar">
+            <a id="login-nav-btn" class="action-btn" href="#" target="_self">🔑 登录</a>
+            <a id="jump-btn" class="action-btn" href="#" target="_blank">🚀 APP观看</a>
+        </div>
     </div>
 
-    <!-- 2. 操作栏 (固定在视频下方) -->
-    <div class="action-bar">
-        <a id="login-btn" class="action-btn" href="#" target="_self">🔑 登录 YouTube</a>
-        <a id="jump-btn" class="action-btn" href="#" target="_blank">🚀 跳转 App 观看</a>
-    </div>
-
-    <!-- 3. 文字内容 -->
-    <div class="content">
+    <!-- 下方滚动内容 -->
+    <div class="content" id="content-area">
         <div class="title">视频摘要</div>
         <div class="text" id="quote-text">正在获取数据...</div>
     </div>
 
     <script>
+        // --- 核心优化：动态计算布局 ---
+        function adjustLayout() {
+            var header = document.getElementById('fixed-header');
+            var content = document.getElementById('content-area');
+            if(header && content) {
+                // 获取顶部固定区域的实际高度，并设置给下方内容的 padding-top
+                // 这样无论手机屏幕多宽，文字永远紧贴在按钮下方，绝不遮挡
+                content.style.paddingTop = (header.offsetHeight + 20) + 'px';
+            }
+        }
+
+        // 页面加载和窗口大小改变时重新计算
+        window.addEventListener('load', adjustLayout);
+        window.addEventListener('resize', adjustLayout);
+        
+        // 稍微延迟一下再次计算，确保 iframe 渲染完成
+        setTimeout(adjustLayout, 500);
+
         try {
             const urlParams = new URLSearchParams(window.location.search);
             const videoId = urlParams.get('v') || urlParams.get('videoId');
@@ -120,47 +176,67 @@
             }
 
             // 2. 构造登录链接
-            // 点击登录后，跳转 Google 登录页，成功后自动跳回当前页
             const currentUrl = window.location.href;
             const loginUrl = "https://accounts.google.com/ServiceLogin?service=youtube&passive=true&continue=" + encodeURIComponent(currentUrl);
             document.getElementById('login-btn').href = loginUrl;
+            document.getElementById('login-nav-btn').href = loginUrl;
 
-            // 3. 构造跳转链接
+            // 3. 加载视频
             if (videoId) {
                 document.getElementById('jump-btn').href = "https://m.youtube.com/watch?v=" + videoId;
 
-                // 4. 暴力插入 IFrame (解决黑屏问题)
-                // controls=1: 强制显示进度条
-                // fs=1: 显示全屏按钮
-                // playsinline=1: 内嵌播放
-                const iframeHtml = `
-                    <iframe 
-                        src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&controls=1&playsinline=1&fs=1&rel=0&modestbranding=1" 
-                        title="YouTube video player" 
-                        frameborder="0" 
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                        referrerpolicy="strict-origin-when-cross-origin" 
-                        allowfullscreen>
-                    </iframe>
-                `;
-                
-                const wrapper = document.getElementById('video-wrapper');
-                // 移除 loader
-                const loader = document.getElementById('loader');
-                if(loader) loader.style.display = 'none';
+                var tag = document.createElement('script');
+                tag.src = "https://www.youtube.com/iframe_api";
+                var firstScriptTag = document.getElementsByTagName('script')[0];
+                firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = iframeHtml.trim();
-                wrapper.appendChild(tempDiv.firstChild);
-
+                var player;
+                window.onYouTubeIframeAPIReady = function() {
+                    player = new YT.Player('player', {
+                        height: '100%',
+                        width: '100%',
+                        videoId: videoId,
+                        host: 'https://www.youtube.com',
+                        playerVars: {
+                            'autoplay': 1,
+                            'controls': 1, // 强制显示
+                            'playsinline': 1,
+                            'fs': 1,       // 强制全屏
+                            'rel': 0,
+                            'modestbranding': 1,
+                            'origin': window.location.origin
+                        },
+                        events: {
+                            'onReady': function(event) {
+                                document.getElementById('loader').style.display = 'none';
+                                event.target.mute();
+                                event.target.playVideo();
+                                // 视频加载出来后，高度可能微调，再次校准布局
+                                setTimeout(adjustLayout, 300);
+                            },
+                            'onError': function(event) {
+                                document.getElementById('loader').style.display = 'none';
+                                console.error("YT Error:", event.data);
+                                if ([150, 101, 152, 5].includes(event.data)) {
+                                    showLoginLayer();
+                                }
+                            }
+                        }
+                    });
+                };
             } else {
                 document.getElementById('loader').style.display = 'none';
-                document.getElementById('video-wrapper').innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100%;color:white;">无效的视频 ID</div>';
+                document.querySelector('.video-wrapper').innerHTML = '<div style="padding:20px;text-align:center;color:white;">无效的视频 ID</div>';
             }
-
         } catch (e) {
             document.getElementById('loader').style.display = 'none';
             document.getElementById('quote-text').innerText = "页面错误：" + e.message;
+        }
+
+        function showLoginLayer() {
+            document.getElementById('login-layer').style.display = 'flex';
+            var iframe = document.querySelector('#player iframe');
+            if(iframe) iframe.style.visibility = 'hidden';
         }
     </script>
 </body>
