@@ -9,8 +9,7 @@
         * { box-sizing: border-box; }
         body { margin: 0; padding: 0; background-color: #121212; color: #e0e0e0; font-family: sans-serif; }
         
-        /* --- 1. 顶部固定区域 (包含视频 + 按钮) --- */
-        /* 我们把视频和按钮打包在一起固定，这样它们之间永远不会互相遮挡 */
+        /* --- 1. 顶部固定区域 (包含视频 + 遮罩) --- */
         #fixed-header {
             position: fixed;
             top: 0;
@@ -39,54 +38,39 @@
             border: none;
         }
 
-        /* 操作栏：自然流在视频下方 */
-        .action-bar {
-            padding: 12px;
-            background: #1e1e1e;
-            border-bottom: 1px solid #333;
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-        }
-
-        .action-btn {
-            color: #3ea6ff;
-            font-size: 13px;
-            text-decoration: none;
-            padding: 6px 16px;
-            border: 1px solid #333;
-            border-radius: 20px;
-            background: #2a2a2a;
-            display: inline-block;
-        }
-
-        /* --- 2. 登录遮罩层 --- */
+        /* --- 2. 智能登录遮罩层 (默认隐藏) --- */
+        /* 只有当视频出错(如需登录)时，JS才会把 display 改为 flex */
         #login-layer {
-            display: none;
-            position: absolute; /* 绝对定位覆盖在 video-wrapper 上 */
+            display: none; /* 【关键】默认不显示 */
+            position: absolute; 
             top: 0; 
             left: 0; 
             width: 100%; 
             height: 100%;
             background-color: rgba(0,0,0,0.9);
-            z-index: 10000; /* 最高层级 */
+            z-index: 10000; /* 盖在视频上面 */
             flex-direction: column; 
             justify-content: center; 
             align-items: center;
             text-align: center;
         }
         
-        #login-msg { color: #fff; font-size: 14px; margin-bottom: 15px; line-height: 1.5; }
+        #login-msg { color: #fff; font-size: 14px; margin-bottom: 15px; line-height: 1.5; padding: 0 20px; }
 
-        #login-btn {
+        .btn {
             background-color: #3ea6ff; color: #000; padding: 8px 24px; 
             text-decoration: none; border-radius: 20px; font-size: 14px;
-            font-weight: 600; border: none; cursor: pointer;
+            font-weight: 600; border: none; cursor: pointer; margin: 5px;
+            display: inline-block;
+        }
+        
+        .btn-secondary {
+            background-color: #333; color: #fff; border: 1px solid #555;
         }
 
         /* --- 3. 下方文字内容区域 --- */
         .content {
-            /* 这里的 padding-top 会由 JS 动态计算，防止被顶部遮挡 */
+            /* 这里的 padding-top 会由 JS 动态计算 */
             padding: 20px 16px;
             min-height: 100vh;
             position: relative;
@@ -113,23 +97,20 @@
 </head>
 <body>
 
-    <!-- 顶部固定区域：包含视频和按钮 -->
+    <!-- 顶部固定区域 -->
     <div id="fixed-header">
         <div class="video-wrapper">
             <div class="loader" id="loader">加载中...</div>
             <div id="player"></div>
             
-            <!-- 登录遮罩 -->
+            <!-- 登录/救场遮罩 (默认隐藏) -->
             <div id="login-layer">
-                <div id="login-msg">播放受限<br>请登录 YouTube</div>
-                <a id="login-btn" href="#">点击登录</a>
+                <div id="login-msg">此视频需要验证身份<br>或受版权限制</div>
+                <div>
+                    <a id="login-btn" class="btn" href="#">🔑 登录 YouTube</a>
+                    <a id="jump-btn" class="btn btn-secondary" href="#" target="_blank">🚀 APP观看</a>
+                </div>
             </div>
-        </div>
-
-        <!-- 操作按钮栏 -->
-        <div class="action-bar">
-            <a id="login-nav-btn" class="action-btn" href="#" target="_self">🔑 登录</a>
-            <a id="jump-btn" class="action-btn" href="#" target="_blank">🚀 APP观看</a>
         </div>
     </div>
 
@@ -140,22 +121,17 @@
     </div>
 
     <script>
-        // --- 核心优化：动态计算布局 ---
+        // --- 布局自适应 ---
         function adjustLayout() {
             var header = document.getElementById('fixed-header');
             var content = document.getElementById('content-area');
             if(header && content) {
-                // 获取顶部固定区域的实际高度，并设置给下方内容的 padding-top
-                // 这样无论手机屏幕多宽，文字永远紧贴在按钮下方，绝不遮挡
+                // 动态设置 padding-top，防止内容被遮挡
                 content.style.paddingTop = (header.offsetHeight + 20) + 'px';
             }
         }
-
-        // 页面加载和窗口大小改变时重新计算
         window.addEventListener('load', adjustLayout);
         window.addEventListener('resize', adjustLayout);
-        
-        // 稍微延迟一下再次计算，确保 iframe 渲染完成
         setTimeout(adjustLayout, 500);
 
         try {
@@ -179,10 +155,10 @@
             const currentUrl = window.location.href;
             const loginUrl = "https://accounts.google.com/ServiceLogin?service=youtube&passive=true&continue=" + encodeURIComponent(currentUrl);
             document.getElementById('login-btn').href = loginUrl;
-            document.getElementById('login-nav-btn').href = loginUrl;
 
-            // 3. 加载视频
+            // 3. 加载 YouTube API (使用 API 模式才能监听错误)
             if (videoId) {
+                // 设置备用跳转链接
                 document.getElementById('jump-btn').href = "https://m.youtube.com/watch?v=" + videoId;
 
                 var tag = document.createElement('script');
@@ -196,10 +172,11 @@
                         height: '100%',
                         width: '100%',
                         videoId: videoId,
+                        // 使用标准域名以便读取 Cookie
                         host: 'https://www.youtube.com',
                         playerVars: {
                             'autoplay': 1,
-                            'controls': 1, // 强制显示
+                            'controls': 1, // 强制显示控制条
                             'playsinline': 1,
                             'fs': 1,       // 强制全屏
                             'rel': 0,
@@ -211,12 +188,16 @@
                                 document.getElementById('loader').style.display = 'none';
                                 event.target.mute();
                                 event.target.playVideo();
-                                // 视频加载出来后，高度可能微调，再次校准布局
                                 setTimeout(adjustLayout, 300);
                             },
                             'onError': function(event) {
                                 document.getElementById('loader').style.display = 'none';
                                 console.error("YT Error:", event.data);
+                                
+                                // 【核心逻辑】只有出错时才显示遮罩
+                                // 错误码 150/101: 禁止嵌入 (通常也是版权/登录问题)
+                                // 错误码 152: 机器人验证/需要登录
+                                // 错误码 5: HTML5 播放器错误 (有时也是受限)
                                 if ([150, 101, 152, 5].includes(event.data)) {
                                     showLoginLayer();
                                 }
@@ -234,7 +215,11 @@
         }
 
         function showLoginLayer() {
-            document.getElementById('login-layer').style.display = 'flex';
+            var layer = document.getElementById('login-layer');
+            layer.style.display = 'flex';
+            
+            // 隐藏背后的 iframe (如果是黑屏的话)，防止它挡住按钮点击
+            // 注意：不要移除 iframe，否则没办法通过刷新来重试
             var iframe = document.querySelector('#player iframe');
             if(iframe) iframe.style.visibility = 'hidden';
         }
