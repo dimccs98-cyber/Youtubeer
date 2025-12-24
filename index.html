@@ -5,135 +5,98 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Video Player</title>
     <style>
-        /* 全局设置 */
+        /* 全局重置 */
         * { box-sizing: border-box; }
         body { margin: 0; padding: 0; background-color: #121212; color: #e0e0e0; font-family: sans-serif; }
         
-        /* --- 1. 顶部固定区域 (包含视频 + 遮罩) --- */
-        #fixed-header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            background: #000;
-            z-index: 9999;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.8);
-        }
-
-        /* 视频容器：保持 16:9 比例 */
-        .video-wrapper {
-            position: relative;
-            width: 100%;
-            height: 0;
-            padding-bottom: 56.25%; /* 16:9 黄金比例 */
-            background: #000;
-        }
-        
-        .video-wrapper iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-
-        /* --- 2. 智能登录遮罩层 (默认隐藏) --- */
-        /* 只有当视频出错(如需登录)时，JS才会把 display 改为 flex */
-        #login-layer {
-            display: none; /* 【关键】默认不显示 */
-            position: absolute; 
+        /* --- 1. 视频区域 (固定头部) --- */
+        .video-container { 
+            position: fixed; 
             top: 0; 
-            left: 0; 
+            left: 0;
             width: 100%; 
-            height: 100%;
-            background-color: rgba(0,0,0,0.9);
-            z-index: 10000; /* 盖在视频上面 */
-            flex-direction: column; 
-            justify-content: center; 
-            align-items: center;
-            text-align: center;
+            height: 0;
+            padding-bottom: 56.25%; /* 16:9 */
+            background: #000; 
+            z-index: 1000; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.8); 
         }
         
-        #login-msg { color: #fff; font-size: 14px; margin-bottom: 15px; line-height: 1.5; padding: 0 20px; }
+        .video-container iframe { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; 
+        }
 
-        .btn {
+        /* --- 2. 登录遮罩层 --- */
+        #login-layer {
+            display: none; /* 默认隐藏 */
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            z-index: 1001;
+            flex-direction: column; justify-content: center; align-items: center;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        #login-msg { color: #fff; font-size: 14px; margin-bottom: 15px; line-height: 1.5; }
+
+        #login-btn {
             background-color: #3ea6ff; color: #000; padding: 8px 24px; 
             text-decoration: none; border-radius: 20px; font-size: 14px;
-            font-weight: 600; border: none; cursor: pointer; margin: 5px;
-            display: inline-block;
+            font-weight: 600; border: none; cursor: pointer;
         }
         
-        .btn-secondary {
-            background-color: #333; color: #fff; border: 1px solid #555;
-        }
+        .login-tip { font-size: 12px; color: #aaa; margin-top: 10px; }
 
-        /* --- 3. 下方文字内容区域 --- */
-        .content {
-            /* 这里的 padding-top 会由 JS 动态计算 */
-            padding: 20px 16px;
-            min-height: 100vh;
-            position: relative;
-            z-index: 1;
+        /* --- 3. 内容区域 --- */
+        .content { 
+            margin-top: 56.25vw; /* 避让视频高度 */
+            padding: 20px 16px; 
+            min-height: 100vh; 
         }
 
         .title { 
             font-size: 18px; font-weight: bold; margin-bottom: 12px; 
             color: #ffffff; border-left: 4px solid #FFD700; padding-left: 10px; 
-            line-height: 1.4;
         }
         .text { 
             font-size: 16px; line-height: 1.6; color: #cccccc; 
             word-wrap: break-word; white-space: pre-wrap; 
         }
-
+        
         /* 加载动画 */
         .loader {
             display: flex; justify-content: center; align-items: center;
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            color: #666; font-size: 14px; z-index: 1;
+            height: 100%; width: 100%; position: absolute; color: #666; font-size: 14px;
+            z-index: 50; background: #000;
         }
+        
+        /* 调试条 */
+        #debug-bar { display: none; background: #800; color: #fff; font-size: 10px; padding: 2px; position: fixed; top:0; left:0; z-index:9999;}
     </style>
 </head>
 <body>
 
-    <!-- 顶部固定区域 -->
-    <div id="fixed-header">
-        <div class="video-wrapper">
-            <div class="loader" id="loader">加载中...</div>
-            <div id="player"></div>
-            
-            <!-- 登录/救场遮罩 (默认隐藏) -->
-            <div id="login-layer">
-                <div id="login-msg">此视频需要验证身份<br>或受版权限制</div>
-                <div>
-                    <a id="login-btn" class="btn" href="#">🔑 登录 YouTube</a>
-                    <a id="jump-btn" class="btn btn-secondary" href="#" target="_blank">🚀 APP观看</a>
-                </div>
-            </div>
+    <div id="debug-bar"></div>
+
+    <div class="video-container">
+        <div class="loader" id="loader">加载中...</div>
+        <div id="player"></div>
+        
+        <!-- 登录/救场遮罩 -->
+        <div id="login-layer">
+            <div id="login-msg">播放受限 (需验证身份)</div>
+            <!-- 修改：跳转到 YouTube 官网登录，避免 400 错误 -->
+            <a id="login-btn" href="https://accounts.google.com/ServiceLogin?service=youtube&continue=https://m.youtube.com">去 YouTube 登录</a>
+            <div class="login-tip">登录成功后，请按 <b>返回键</b> 回到此页</div>
         </div>
     </div>
 
-    <!-- 下方滚动内容 -->
-    <div class="content" id="content-area">
+    <div class="content">
         <div class="title">视频摘要</div>
         <div class="text" id="quote-text">正在获取数据...</div>
     </div>
 
     <script>
-        // --- 布局自适应 ---
-        function adjustLayout() {
-            var header = document.getElementById('fixed-header');
-            var content = document.getElementById('content-area');
-            if(header && content) {
-                // 动态设置 padding-top，防止内容被遮挡
-                content.style.paddingTop = (header.offsetHeight + 20) + 'px';
-            }
-        }
-        window.addEventListener('load', adjustLayout);
-        window.addEventListener('resize', adjustLayout);
-        setTimeout(adjustLayout, 500);
-
         try {
             const urlParams = new URLSearchParams(window.location.search);
             const videoId = urlParams.get('v') || urlParams.get('videoId');
@@ -151,16 +114,8 @@
                 quoteDiv.innerText = "暂无摘要内容";
             }
 
-            // 2. 构造登录链接
-            const currentUrl = window.location.href;
-            const loginUrl = "https://accounts.google.com/ServiceLogin?service=youtube&passive=true&continue=" + encodeURIComponent(currentUrl);
-            document.getElementById('login-btn').href = loginUrl;
-
-            // 3. 加载 YouTube API (使用 API 模式才能监听错误)
+            // 2. 加载 YouTube API
             if (videoId) {
-                // 设置备用跳转链接
-                document.getElementById('jump-btn').href = "https://m.youtube.com/watch?v=" + videoId;
-
                 var tag = document.createElement('script');
                 tag.src = "https://www.youtube.com/iframe_api";
                 var firstScriptTag = document.getElementsByTagName('script')[0];
@@ -172,33 +127,32 @@
                         height: '100%',
                         width: '100%',
                         videoId: videoId,
-                        // 使用标准域名以便读取 Cookie
+                        // 使用标准域名读取 Cookie
                         host: 'https://www.youtube.com',
                         playerVars: {
                             'autoplay': 1,
                             'controls': 1, // 强制显示控制条
                             'playsinline': 1,
-                            'fs': 1,       // 强制全屏
+                            'fs': 1,
                             'rel': 0,
                             'modestbranding': 1,
                             'origin': window.location.origin
                         },
                         events: {
                             'onReady': function(event) {
-                                document.getElementById('loader').style.display = 'none';
-                                // event.target.mute(); // 注释掉静音，实现默认有声播放
+                                hideLoader();
+                                event.target.mute(); 
                                 event.target.playVideo();
-                                setTimeout(adjustLayout, 300);
                             },
                             'onError': function(event) {
-                                document.getElementById('loader').style.display = 'none';
+                                hideLoader();
                                 console.error("YT Error:", event.data);
-                                
-                                // 【核心逻辑】只有出错时才显示遮罩
-                                // 错误码 150/101: 禁止嵌入 (通常也是版权/登录问题)
-                                // 错误码 152: 机器人验证/需要登录
-                                // 错误码 5: HTML5 播放器错误 (有时也是受限)
-                                if ([150, 101, 152, 5].includes(event.data)) {
+                                // 错误处理：显示登录遮罩
+                                if ([150, 101, 152, 5].indexOf(event.data) !== -1) {
+                                    showLoginLayer();
+                                } else {
+                                    // 其他错误也显示遮罩，防止一直黑屏
+                                    document.getElementById('login-msg').innerText = "播放出错 (代码 " + event.data + ")";
                                     showLoginLayer();
                                 }
                             }
@@ -206,20 +160,24 @@
                     });
                 };
             } else {
-                document.getElementById('loader').style.display = 'none';
-                document.querySelector('.video-wrapper').innerHTML = '<div style="padding:20px;text-align:center;color:white;">无效的视频 ID</div>';
+                hideLoader();
+                document.querySelector('.video-container').innerHTML = '<div style="padding:20px;text-align:center;color:white;">无效的视频 ID</div>';
             }
         } catch (e) {
-            document.getElementById('loader').style.display = 'none';
+            hideLoader();
             document.getElementById('quote-text').innerText = "页面错误：" + e.message;
+        }
+
+        function hideLoader() {
+            var loader = document.getElementById('loader');
+            if(loader) loader.style.display = 'none';
         }
 
         function showLoginLayer() {
             var layer = document.getElementById('login-layer');
-            layer.style.display = 'flex';
+            if(layer) layer.style.display = 'flex';
             
-            // 隐藏背后的 iframe (如果是黑屏的话)，防止它挡住按钮点击
-            // 注意：不要移除 iframe，否则没办法通过刷新来重试
+            // 隐藏 iframe，防止挡住按钮
             var iframe = document.querySelector('#player iframe');
             if(iframe) iframe.style.visibility = 'hidden';
         }
