@@ -141,7 +141,7 @@
                         events: {
                             'onReady': function(event) {
                                 hideLoader();
-                                event.target.mute(); 
+                                event.target.unMute(); 
                                 event.target.playVideo();
                             },
                             'onError': function(event) {
@@ -184,3 +184,4 @@
     </script>
 </body>
 </html>
+
