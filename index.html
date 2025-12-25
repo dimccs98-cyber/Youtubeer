@@ -51,7 +51,12 @@
         .content { 
             margin-top: 56.25vw; /* 避让视频高度 */
             padding: 20px 16px; 
-            min-height: 100vh; 
+            
+            /* --- 修改处：不再强制 100vh，而是减去视频高度 --- */
+            /* 旧代码: min-height: 100vh; */
+            /* 新代码: 屏幕高度 - 视频高度 = 剩余空间 */
+            min-height: calc(100vh - 56.25vw); 
+            /* ------------------------------------------- */
         }
 
         .title { 
@@ -82,10 +87,8 @@
         <div class="loader" id="loader">加载中...</div>
         <div id="player"></div>
         
-        <!-- 登录/救场遮罩 -->
         <div id="login-layer">
             <div id="login-msg">播放受限 (需验证身份)</div>
-            <!-- 修改：跳转到 YouTube 官网登录，避免 400 错误 -->
             <a id="login-btn" href="https://accounts.google.com/ServiceLogin?service=youtube&continue=https://m.youtube.com">去 YouTube 登录</a>
             <div class="login-tip">登录成功后，请按 <b>返回键</b> 回到此页</div>
         </div>
@@ -127,11 +130,10 @@
                         height: '100%',
                         width: '100%',
                         videoId: videoId,
-                        // 使用标准域名读取 Cookie
                         host: 'https://www.youtube.com',
                         playerVars: {
                             'autoplay': 1,
-                            'controls': 1, // 强制显示控制条
+                            'controls': 1, 
                             'playsinline': 1,
                             'fs': 1,
                             'rel': 0,
@@ -141,17 +143,15 @@
                         events: {
                             'onReady': function(event) {
                                 hideLoader();
-                                event.target.unMute(); 
+                                event.target.unMute();  // 只取消静音
                                 event.target.playVideo();
                             },
                             'onError': function(event) {
                                 hideLoader();
                                 console.error("YT Error:", event.data);
-                                // 错误处理：显示登录遮罩
                                 if ([150, 101, 152, 5].indexOf(event.data) !== -1) {
                                     showLoginLayer();
                                 } else {
-                                    // 其他错误也显示遮罩，防止一直黑屏
                                     document.getElementById('login-msg').innerText = "播放出错 (代码 " + event.data + ")";
                                     showLoginLayer();
                                 }
@@ -177,11 +177,9 @@
             var layer = document.getElementById('login-layer');
             if(layer) layer.style.display = 'flex';
             
-            // 隐藏 iframe，防止挡住按钮
             var iframe = document.querySelector('#player iframe');
             if(iframe) iframe.style.visibility = 'hidden';
         }
     </script>
 </body>
 </html>
-
