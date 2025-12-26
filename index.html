@@ -36,7 +36,7 @@
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; 
         }
 
-        /* --- 3. 内容滚动区域 (调整位置以防遮挡) --- */
+        /* --- 3. 内容滚动区域 (移除圆角) --- */
         .content-scroll-area {
             flex: 1; 
             overflow-y: auto; 
@@ -44,24 +44,25 @@
             position: relative;
             z-index: 100;
             
-            /* 关键修改：取消负边距，不再遮挡播放器 */
+            /* 关键修改：取消圆角和负边距 */
             margin-top: 0; 
             background-color: #F3F2EE;
-            border-radius: 24px 24px 0 0;
+            border-radius: 0; /* 移除圆角 */
             
-            /* 柔和阴影，保留叠层感 */
-            box-shadow: 0 -4px 16px rgba(0,0,0,0.1);
+            /* 使用更细微的顶部边线代替阴影，使平整过渡更自然 */
+            border-top: 1px solid rgba(0,0,0,0.05);
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
             
             padding: 0 24px 100px 24px;
         }
 
-        /* 装饰把手 */
+        /* 装饰把手：在平整设计中依然保留，增加层次感 */
         .handle-bar {
             width: 36px;
             height: 4px;
             background-color: #D1D1D1;
             border-radius: 2px;
-            margin: 14px auto 22px auto;
+            margin: 16px auto 22px auto;
         }
 
         /* --- 4. 视频概况排版 --- */
@@ -87,6 +88,7 @@
             position: relative;
         }
 
+        /* 金色点缀小方块 */
         .title::before {
             content: "";
             position: absolute;
@@ -164,7 +166,7 @@
         </div>
     </div>
 
-    <!-- 内容区域 -->
+    <!-- 内容区域 (平整化设计) -->
     <div class="content-scroll-area">
         <div class="handle-bar"></div>
         
@@ -183,6 +185,7 @@
     </div>
 
     <script>
+        // 处理文本注入
         window.updateContent = function(base64Text) {
             try {
                 const binaryString = atob(base64Text);
