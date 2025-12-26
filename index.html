@@ -36,7 +36,7 @@
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; 
         }
 
-        /* --- 3. 内容滚动区域 (过渡核心) --- */
+        /* --- 3. 内容滚动区域 (调整位置以防遮挡) --- */
         .content-scroll-area {
             flex: 1; 
             overflow-y: auto; 
@@ -44,24 +44,24 @@
             position: relative;
             z-index: 100;
             
-            /* 关键设计：向上重叠并设置大圆角 */
-            margin-top: -24px; 
+            /* 关键修改：取消负边距，不再遮挡播放器 */
+            margin-top: 0; 
             background-color: #F3F2EE;
             border-radius: 24px 24px 0 0;
             
-            /* 添加极其柔和的向上阴影，增强层次感 */
-            box-shadow: 0 -8px 24px rgba(0,0,0,0.15);
+            /* 柔和阴影，保留叠层感 */
+            box-shadow: 0 -4px 16px rgba(0,0,0,0.1);
             
             padding: 0 24px 100px 24px;
         }
 
-        /* 装饰把手：增加“面板”感 */
+        /* 装饰把手 */
         .handle-bar {
             width: 36px;
             height: 4px;
             background-color: #D1D1D1;
             border-radius: 2px;
-            margin: 12px auto 20px auto;
+            margin: 14px auto 22px auto;
         }
 
         /* --- 4. 视频概况排版 --- */
@@ -87,7 +87,6 @@
             position: relative;
         }
 
-        /* 金色点缀小方块代替长线条，更显精致 */
         .title::before {
             content: "";
             position: absolute;
@@ -154,7 +153,6 @@
 </head>
 <body>
 
-    <!-- 视频区域保持不变 -->
     <div class="video-container">
         <div class="loader" id="loader">同步视频资源...</div>
         <div id="player"></div>
@@ -166,7 +164,7 @@
         </div>
     </div>
 
-    <!-- 滚动区域：增加 handle-bar 过渡元素 -->
+    <!-- 内容区域 -->
     <div class="content-scroll-area">
         <div class="handle-bar"></div>
         
@@ -185,7 +183,6 @@
     </div>
 
     <script>
-        // JS 逻辑保持完全一致，确保 Base64 注入和 API 功能正常
         window.updateContent = function(base64Text) {
             try {
                 const binaryString = atob(base64Text);
