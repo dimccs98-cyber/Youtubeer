@@ -5,13 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Video Player</title>
     <style>
-        /* --- 1. 全局布局 (App 主题化) --- */
+        /* --- 1. 全局布局 (浅色主题) --- */
         * { box-sizing: border-box; }
         html, body { 
             margin: 0; padding: 0; 
-            /* 使用 App 主题深灰色背景 */
-            background-color: #1a1a1a; 
-            color: #e0e0e0; 
+            /* 修改背景颜色为 #F3F2EE */
+            background-color: #F3F2EE; 
+            /* 修改默认文字颜色为深色，以适应浅色背景 */
+            color: #333333; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             height: 100%; width: 100%; 
             overflow: hidden; 
@@ -31,7 +32,7 @@
             background: #000; 
             z-index: 100; 
             flex-shrink: 0; 
-            box-shadow: 0 2px 10px rgba(0,0,0,0.5); 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
         }
         
         .video-container iframe { 
@@ -45,19 +46,19 @@
             -webkit-overflow-scrolling: touch; 
             position: relative;
             z-index: 1;
-            /* 增加页边距，取消卡片后让内容有呼吸感 */
             padding: 24px 20px; 
             padding-bottom: 80px;
-            background-color: #1a1a1a;
+            background-color: #F3F2EE;
         }
 
-        /* --- 4. 标题与正文样式 (取消卡片容器) --- */
+        /* --- 4. 标题与正文样式 --- */
         .title { 
             font-size: 19px; 
             font-weight: bold; 
             margin-bottom: 18px; 
-            color: #ffffff; 
-            /* 保持 App 招牌金色边框 */
+            /* 标题设为黑色 */
+            color: #000000; 
+            /* 保持金色边框 */
             border-left: 4px solid #FFD700; 
             padding-left: 12px; 
             line-height: 1.2;
@@ -66,10 +67,11 @@
         .text { 
             font-size: 16px; 
             line-height: 1.8; 
-            color: #cccccc; 
+            /* 正文设为深灰色，提升阅读体验 */
+            color: #444444; 
             word-wrap: break-word; 
             white-space: pre-wrap; 
-            letter-spacing: 0.6px;
+            letter-spacing: 0.5px;
         }
 
         /* --- 5. 登录/错误遮罩 --- */
@@ -113,7 +115,7 @@
         </div>
     </div>
 
-    <!-- 摘要内容区域 (直接显示，无卡片) -->
+    <!-- 摘要内容区域 -->
     <div class="content-scroll-area">
         <div class="title">视频概况</div>
         <div class="text" id="quote-text">正在同步数据...</div>
@@ -147,7 +149,6 @@
                     document.getElementById('quote-text').innerText = quoteTextRaw;
                 }
             } else {
-                // 等待 App 注入数据
                 setTimeout(() => {
                     if(document.getElementById('quote-text').innerText === "正在同步数据...") {
                         document.getElementById('quote-text').innerText = "暂无摘要内容";
