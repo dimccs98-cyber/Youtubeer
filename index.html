@@ -5,11 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Video Player</title>
     <style>
-        /* --- 1. 全局布局 --- */
+        /* --- 1. 全局布局 (App 主题化) --- */
         * { box-sizing: border-box; }
         html, body { 
             margin: 0; padding: 0; 
-            background-color: #000000; /* 全局背景设为纯黑 */
+            /* 使用 App 主题深灰色背景 */
+            background-color: #1a1a1a; 
             color: #e0e0e0; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             height: 100%; width: 100%; 
@@ -44,27 +45,17 @@
             -webkit-overflow-scrolling: touch; 
             position: relative;
             z-index: 1;
-            padding: 16px;
-            padding-bottom: 60px;
-            background-color: #000000; /* 背景保持纯黑 */
+            /* 增加页边距，取消卡片后让内容有呼吸感 */
+            padding: 24px 20px; 
+            padding-bottom: 80px;
+            background-color: #1a1a1a;
         }
 
-        /* --- 4. 视频概况卡片 (仅修改背景颜色) --- */
-        .summary-card {
-            /* 修改为 App 同款主题深灰色 (#1E1E1E) */
-            background-color: #1E1E1E; 
-            border-radius: 12px;
-            padding: 20px;
-            /* 保持微弱阴影和边框增加质感 */
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-            border: 1px solid #2a2a2a;
-            margin-bottom: 20px;
-        }
-
+        /* --- 4. 标题与正文样式 (取消卡片容器) --- */
         .title { 
-            font-size: 18px; 
+            font-size: 19px; 
             font-weight: bold; 
-            margin-bottom: 16px; 
+            margin-bottom: 18px; 
             color: #ffffff; 
             /* 保持 App 招牌金色边框 */
             border-left: 4px solid #FFD700; 
@@ -75,10 +66,10 @@
         .text { 
             font-size: 16px; 
             line-height: 1.8; 
-            color: #bbbbbb; 
+            color: #cccccc; 
             word-wrap: break-word; 
             white-space: pre-wrap; 
-            letter-spacing: 0.5px;
+            letter-spacing: 0.6px;
         }
 
         /* --- 5. 登录/错误遮罩 --- */
@@ -96,7 +87,7 @@
 
         #login-btn {
             background-color: #3ea6ff; color: #000; padding: 12px 30px; 
-            text-decoration: none; border-radius: 25px; font-size: 14px;
+            text-decoration: none; border-radius: 25px; font-size: 15px;
             font-weight: 600; border: none; cursor: pointer;
         }
 
@@ -122,12 +113,10 @@
         </div>
     </div>
 
-    <!-- 摘要内容区域 -->
+    <!-- 摘要内容区域 (直接显示，无卡片) -->
     <div class="content-scroll-area">
-        <div class="summary-card">
-            <div class="title">视频概况</div>
-            <div class="text" id="quote-text">正在同步数据...</div>
-        </div>
+        <div class="title">视频概况</div>
+        <div class="text" id="quote-text">正在同步数据...</div>
     </div>
 
     <script>
